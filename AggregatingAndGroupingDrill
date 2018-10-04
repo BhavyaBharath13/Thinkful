@@ -1,0 +1,30 @@
+--What was the hottest day in our data set? Where was that?
+SELECT
+	date AS hottest_day,
+	zip
+FROM
+	weather
+ORDER BY maxtemperaturef DESC
+LIMIT 1;
+
+--How many trips started at each station?
+SELECT
+	start_station,
+	COUNT(*) AS no_of_trips
+FROM
+	trips
+GROUP BY start_station;	
+	
+--What's the shortest trip that happened?
+SELECT
+	MIN(duration) AS shortest_trip
+FROM
+	trips;
+--What is the average trip duration, by end station?
+SELECT
+	end_station,
+	AVG(duration) AS average_duration
+FROM
+	trips
+GROUP BY end_station;	
+	
