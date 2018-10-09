@@ -1,0 +1,86 @@
+ALTER TABLE listings ALTER COLUMN price TYPE MONEY USING price::money;
+ALTER TABLE listings ALTER COLUMN security_deposit TYPE MONEY USING security_deposit::money;
+ALTER TABLE listings ALTER COLUMN cleaning_fee TYPE MONEY USING cleaning_fee::money;
+ALTER TABLE calendar ALTER COLUMN price TYPE MONEY USING price::money;
+DELETE FROM calendar WHERE date = '2';
+
+--What's the most expensive listing? What else can you tell me about the listing?
+
+SELECT 
+	id,
+	name,
+	host_name,
+	property_type,
+	room_type,
+	accommodates,
+	bathrooms,
+	bedrooms,
+	(CASE WHEN price IS NOT NULL then price ELSE MONEY(0.0) END) AS rate,
+	(CASE WHEN security_deposit IS NOT NULL then security_deposit ELSE MONEY(0.0) END) AS deposit,
+	(CASE WHEN cleaning_fee IS NOT NULL then cleaning_fee ELSE MONEY(0.0) END) AS fees,
+	(CASE WHEN price IS NOT NULL then price ELSE MONEY(0.0) END) + (CASE WHEN security_deposit IS NOT NULL then security_deposit ELSE MONEY(0.0) END) + 
+	(CASE WHEN cleaning_fee IS NOT NULL then cleaning_fee ELSE MONEY(0.0) END) AS upfront,
+	number_of_reviews
+FROM
+	listings
+ORDER BY upfront DESC
+LIMIT 1;
+
+--What neighborhoods seem to be the most popular
+
+WITH
+	availability
+AS(
+	SELECT
+		listing_id,
+		available
+	FROM
+		calendar
+	WHERE
+		available = 'f'
+	GROUP BY 1, 2
+)
+SELECT
+	list.neighbourhood_cleansed,
+	avail.available,
+	count(*) AS unavailable_days
+FROM
+	listings list
+JOIN
+	availability avail
+ON 
+	avail.listing_id = list.id
+GROUP BY 1,2
+ORDER BY unavailable_days DESC
+LIMIT 5;
+
+--What time of year is the cheapest time to go to your city? 
+
+SELECT
+	EXTRACT(MONTH FROM DATE(date)) AS month_of_year,
+	AVG(price::numeric::float8) AS avg_price
+FROM 
+	calendar
+GROUP BY 1
+ORDER BY avg_price ASC;
+
+--What about the busiest?
+
+WITH 
+	avail
+AS (
+	SELECT
+		EXTRACT(MONTH FROM DATE(date)) AS month_of_year,
+		(CASE WHEN available = 't' THEN 1.0 ELSE 0.0 END) AS availablility,
+		1 AS rowcount
+	FROM 
+		calendar						
+)
+SELECT 
+	 month_of_year,
+	 ROUND((1 - SUM (availablility)/SUM(rowcount))::DECIMAL*100, 2) AS percentage_busiest		
+FROM 
+	 avail
+GROUP BY 1
+ORDER BY percentage_busiest DESC;
+							
